@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jroimartin/gocui"
+	"runtime"
 )
 //                                     ,-windows precision
 //                                    |  ,-mac precision
@@ -13,6 +14,8 @@ import (
 var tFmt = "2006-01-02 15:04:05.000000000 -0700 MST"
 
 var visited = make([][]bool, 8)
+
+var dx = 0
 
 func main() {
 	g, err := gocui.NewGui(gocui.OutputNormal)
@@ -31,16 +34,25 @@ func main() {
 
 	g.SetManagerFunc(layout)
 
-	//TODO would be nice to set exit hotkey based on OS detection
-	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+
+	if runtime.GOOS == "windows"{
+		if err := g.SetKeybinding("", gocui.KeyCtrlW, gocui.ModNone, quit); err != nil {
+			log.Panicln(err)
+		}
+	} else {
+		if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+			log.Panicln(err)
+		}
+	}
+
+	if err := g.SetKeybinding("", gocui.KeyArrowLeft, gocui.ModNone, moveLeft ); err != nil {
+		log.Panicln(err)
+	}
+	if err := g.SetKeybinding("", gocui.KeyArrowRight, gocui.ModNone, moveRight ); err != nil {
 		log.Panicln(err)
 	}
 
-	if err := g.SetKeybinding("", gocui.KeyCtrlW, gocui.ModNone, quit); err != nil {
-		log.Panicln(err)
-	}
-
-	targetFps := int64(120)
+	targetFps := int64(6)
 	duration := time.Duration(time.Second.Nanoseconds() / targetFps)*time.Nanosecond
 	tick := time.NewTicker(duration)
 	last := time.Now()
@@ -72,7 +84,7 @@ func main() {
 				if err != nil {
 					log.Panicln(err)
 				}
-				colorFPrintln(v, t.Format(tFmt), f, b)
+				fmt.Fprint(v, "\n", colorize(t.Format(tFmt), b, f))
 				return nil
 			})
 
@@ -83,12 +95,12 @@ func main() {
 				}
 				v.Clear()
 
-				denom := t.Sub(last).Nanoseconds()
+				denominator := t.Sub(last).Nanoseconds()
 				var fps interface{} = "INFINITY"
-				if denom != 0{
-					fps = (time.Second.Nanoseconds()/denom)
+				if denominator != 0{
+					fps = time.Second.Nanoseconds()/ denominator
 				}
-				fmt.Fprintln(v, f, b,"TARGET FPS:", targetFps, "FRAMELENGTH:", duration)
+				fmt.Fprintln(v, dx, runtime.GOOS,"TARGET FPS:", targetFps, "FRAMELENGTH:", duration)
 				fmt.Fprintln(v, "APPROX FPS:", fps)
 				last = t
 				return nil
@@ -105,7 +117,7 @@ func main() {
 					for i := range visited {
 						for j := range visited[i] {
 							if visited[i][j] {
-								colorFPrint(v, "▮", uint8(j), uint8(i))
+								fmt.Fprint(v, colorize("▮", uint8(j), uint8(i)))
 							} else {
 								fmt.Fprint(v, " ")
 							}
@@ -123,23 +135,19 @@ func main() {
 	}
 }
 
-func colorFPrint(v *gocui.View, string string, f, b uint8) {
-	fmt.Fprintf(v, "\033[3%dm\033[4%dm%s\033[0m", f, b, string)
-}
-func colorFPrintln(v *gocui.View, string string, f, b uint8) {
-	//Prepend newline so that autoscroll doesn't advance prematurely
-	fmt.Fprintf(v, "\n\033[3%dm\033[4%dm%s\033[0m", f, b, string)
+func colorize(s string, f, b uint8) string{
+	return fmt.Sprintf("\033[3%dm\033[4%dm%s\033[0m", f, b, s)
 }
 
 func layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
-	if v, err := g.SetView("t1", maxX/2-20, maxY/2, maxX/2+30, maxY/2+3); err != nil {
+	if v, err := g.SetView("t1", maxX/2-20 + dx, maxY/2, maxX/2+30 + dx, maxY/2+3); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 		v.Frame = false
 	}
-	if v, err := g.SetView("t2", maxX/2-20, 0, maxX/2+20, maxY/2); err != nil {
+	if v, err := g.SetView("t2", maxX/2-20 + dx, 0, maxX/2+20 + dx, maxY/2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -147,13 +155,23 @@ func layout(g *gocui.Gui) error {
 		v.Frame = true
 		v.Title = "]TIME["
 	}
-	if v, err := g.SetView("grid", 0, 0, 9, 9); err != nil {
+	if v, err := g.SetView("grid", 0, 0 + dx, 9, 9 + dx); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 		v.Frame = true
 		v.Title = "]SEEN["
 	}
+	return nil
+}
+
+func moveLeft(_ *gocui.Gui, _ *gocui.View) error{
+	dx -= 1
+	return nil
+}
+
+func moveRight(_ *gocui.Gui, _ *gocui.View) error{
+	dx += 1
 	return nil
 }
 
