@@ -8,6 +8,7 @@ import (
 	"github.com/jroimartin/gocui"
 	"runtime"
 )
+
 //                                     ,-windows precision
 //                                    |  ,-mac precision
 //                                    v v
@@ -34,8 +35,7 @@ func main() {
 
 	g.SetManagerFunc(layout)
 
-
-	if runtime.GOOS == "windows"{
+	if runtime.GOOS == "windows" {
 		if err := g.SetKeybinding("", gocui.KeyCtrlW, gocui.ModNone, quit); err != nil {
 			log.Panicln(err)
 		}
@@ -45,15 +45,15 @@ func main() {
 		}
 	}
 
-	if err := g.SetKeybinding("", gocui.KeyArrowLeft, gocui.ModNone, moveLeft ); err != nil {
+	if err := g.SetKeybinding("", gocui.KeyArrowLeft, gocui.ModNone, moveLeft); err != nil {
 		log.Panicln(err)
 	}
-	if err := g.SetKeybinding("", gocui.KeyArrowRight, gocui.ModNone, moveRight ); err != nil {
+	if err := g.SetKeybinding("", gocui.KeyArrowRight, gocui.ModNone, moveRight); err != nil {
 		log.Panicln(err)
 	}
 
 	targetFps := int64(6)
-	duration := time.Duration(time.Second.Nanoseconds() / targetFps)*time.Nanosecond
+	duration := time.Duration(time.Second.Nanoseconds()/targetFps) * time.Nanosecond
 	tick := time.NewTicker(duration)
 	last := time.Now()
 
@@ -97,10 +97,10 @@ func main() {
 
 				denominator := t.Sub(last).Nanoseconds()
 				var fps interface{} = "INFINITY"
-				if denominator != 0{
-					fps = time.Second.Nanoseconds()/ denominator
+				if denominator != 0 {
+					fps = time.Second.Nanoseconds() / denominator
 				}
-				fmt.Fprintln(v, dx, runtime.GOOS,"TARGET FPS:", targetFps, "FRAMELENGTH:", duration)
+				fmt.Fprintln(v, dx, runtime.GOOS, "TARGET FPS:", targetFps, "FRAMELENGTH:", duration)
 				fmt.Fprintln(v, "APPROX FPS:", fps)
 				last = t
 				return nil
@@ -135,19 +135,19 @@ func main() {
 	}
 }
 
-func colorize(s string, f, b uint8) string{
+func colorize(s string, f, b uint8) string {
 	return fmt.Sprintf("\033[3%dm\033[4%dm%s\033[0m", f, b, s)
 }
 
 func layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
-	if v, err := g.SetView("t1", maxX/2-20 + dx, maxY/2, maxX/2+30 + dx, maxY/2+3); err != nil {
+	if v, err := g.SetView("t1", maxX/2-20+dx, maxY/2, maxX/2+30+dx, maxY/2+3); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 		v.Frame = false
 	}
-	if v, err := g.SetView("t2", maxX/2-20 + dx, 0, maxX/2+20 + dx, maxY/2); err != nil {
+	if v, err := g.SetView("t2", maxX/2-20+dx, 0, maxX/2+20+dx, maxY/2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -155,7 +155,7 @@ func layout(g *gocui.Gui) error {
 		v.Frame = true
 		v.Title = "]TIME["
 	}
-	if v, err := g.SetView("grid", 0, 0 + dx, 9, 9 + dx); err != nil {
+	if v, err := g.SetView("grid", 0, 0+dx, 9, 9+dx); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -165,12 +165,12 @@ func layout(g *gocui.Gui) error {
 	return nil
 }
 
-func moveLeft(_ *gocui.Gui, _ *gocui.View) error{
+func moveLeft(_ *gocui.Gui, _ *gocui.View) error {
 	dx -= 1
 	return nil
 }
 
-func moveRight(_ *gocui.Gui, _ *gocui.View) error{
+func moveRight(_ *gocui.Gui, _ *gocui.View) error {
 	dx += 1
 	return nil
 }
