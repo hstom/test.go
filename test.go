@@ -17,6 +17,8 @@ var tFmt = "2006-01-02 15:04:05.000000000 -0700 MST"
 var dx = 0
 var dy = 0
 
+var pause bool = false
+
 func main() {
 	g, err := gocui.NewGui(gocui.OutputNormal)
 	if err != nil {
@@ -50,62 +52,65 @@ func main() {
 	bindMoveKey(gocui.KeyArrowRight, func() { dx += 1 })
 	bindMoveKey(gocui.KeyArrowUp, func() { dy -= 1 })
 	bindMoveKey(gocui.KeyArrowDown, func() { dy += 1 })
+	bindMoveKey(gocui.KeySpace, func() { pause = !pause})
 
-	targetFps := int64(4)
+	targetFps := int64(6)
 	duration := time.Duration(time.Second.Nanoseconds()/targetFps) * time.Nanosecond
 	tick := time.NewTicker(duration)
 	last := time.Now()
 
-	steps := 0
 	f := uint8(7)
 	b := uint8(7)
 
+	step := 0
+
 	go func() {
 		for t := range tick.C {
-			b = (b + 1) % 8
-
-			if b == 0 {
-				f = (f + 1) % 8
-			}
-
-			if b == f {
+			step += 1
+			if !pause {
 				b = (b + 1) % 8
+
 				if b == 0 {
-					f = 1
-					b = 0
+					f = (f + 1) % 8
 				}
-			}
 
-			visited[b][f] = true
-
-			g.Execute(func(g *gocui.Gui) error {
-				v, err := g.View("t2")
-				if err != nil {
-					log.Panicln(err)
+				if b == f {
+					b = (b + 1) % 8
+					if b == 0 {
+						visited = initVisited()
+						f = 0
+						b = 1
+					}
 				}
-				fmt.Fprint(v, "\n", colorize(t.Format(tFmt), b, f))
-				return nil
-			})
 
-			g.Execute(func(g *gocui.Gui) error {
-				v, err := g.View("t1")
-				if err != nil {
-					log.Panicln(err)
-				}
-				v.Clear()
+				visited[b][f] = true
 
-				denominator := t.Sub(last).Nanoseconds()
-				var fps interface{} = "INFINITY"
-				if denominator != 0 {
-					fps = time.Second.Nanoseconds() / denominator
-				}
-				fmt.Fprintln(v, runtime.GOOS, "APROX FPS:", fps, "dx:", dx, "dy:", dy)
-				last = t
-				return nil
-			})
+				g.Execute(func(g *gocui.Gui) error {
+					v, err := g.View("t2")
+					if err != nil {
+						log.Panicln(err)
+					}
+					fmt.Fprint(v, "\n", colorize(t.Format(tFmt), b, f))
+					return nil
+				})
 
-			if steps < 64 {
-				steps += 1
+				g.Execute(func(g *gocui.Gui) error {
+					v, err := g.View("t1")
+					if err != nil {
+						log.Panicln(err)
+					}
+					v.Clear()
+
+					denominator := t.Sub(last).Nanoseconds()
+					var fps interface{} = "INFINITY"
+					if denominator != 0 {
+						fps = time.Second.Nanoseconds() / denominator
+					}
+					fmt.Fprintln(v, runtime.GOOS, "TICK FPS:", fps, "dx:", dx, "dy:", dy)
+					last = t
+					return nil
+				})
+
 				g.Execute(func(g *gocui.Gui) error {
 					v, err := g.View("grid")
 					if err != nil {
@@ -115,7 +120,7 @@ func main() {
 					for i := range visited {
 						for j := range visited[i] {
 							if visited[i][j] {
-								fmt.Fprint(v, colorize("▮", uint8(j), uint8(i)))
+								fmt.Fprint(v, colorize("▮", uint8(i), uint8(j)))
 							} else {
 								fmt.Fprint(v, " ")
 							}
